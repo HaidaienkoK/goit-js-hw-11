@@ -1,15 +1,22 @@
 import './css/common.css';
+import LoadMoreBtn from './components/LoadMoreBtn.js';
 import { Notify } from 'notiflix/build/notiflix-notify-aio'; //для сообщений
 import SimpleLightbox from 'simplelightbox';
 import 'simplelightbox/dist/simple-lightbox.min.css';
 // import debounce from 'lodash.debounce';
-import API from './js/axiosRequest';
+import AxiosRequest from './js/axiosRequest';
 
-const inputEl = document.querySelector('input');
-const submitBtn = document.getElementById('searchBtn');
+const form = document.getElementById('search-form');
 const cardsContainer = document.querySelector('.gallery');
+const loadMoreBtn = new LoadMoreBtn({
+  selector: '.load-more',
+  isHidden: true,
+});
 
-submitBtn.addEventListener('click', onSearch);
+form.addEventListener('submit', onSearch);
+loadMoreBtn.button.addEventListener('click', onLoadMore);
+
+const axiosRequest = new AxiosRequest();
 
 let lightbox = new SimpleLightbox('.photo-card a', {
   captions: true,
@@ -17,28 +24,27 @@ let lightbox = new SimpleLightbox('.photo-card a', {
   captionDelay: 250,
 });
 
-let searchQuery = '';
-function onSearch(e) {
+async function onSearch(e) {
   e.preventDefault();
-  searchQuery = inputEl.value;
+  axiosRequest.query = e.currentTarget.searchQuery.value.trim();
+  axiosRequest.resetPage();
+  clearCards();
 
-  if (searchQuery === '') {
-    clearCountry();
+  if (axiosRequest.query === '') {
+    loadMoreBtn.hide();
+    alert('No data');
   } else {
-    API.fetchElement(searchQuery)
-      .then(renderCard)
-      .catch(error => error);
+    loadMoreBtn.show();
+    const response = await axiosRequest.fetchElement();
+    Notify.success(`Hooray! We found ${axiosRequest.totalHits} images.`);
+    onCurrentHits(response);
   }
 }
 
 function renderCard(cards) {
-  console.log(cards);
-  // lightbox.refresh();
   if (cards.length === 0) {
     onFitchError();
   } else {
-    clearCards();
-
     const markup = cards
       .map(
         ({
@@ -75,14 +81,45 @@ function renderCard(cards) {
 
     cardsContainer.insertAdjacentHTML('beforeend', markup);
   }
+  loadMoreBtn.enable();
+}
+
+async function onLoadMore() {
+  loadMoreBtn.disable();
+  const response = await axiosRequest.fetchElement();
+  onCurrentHits(response);
+
+  const { height: cardHeight } = document
+    .querySelector('.gallery')
+    .firstElementChild.getBoundingClientRect();
+
+  window.scrollBy({
+    top: cardHeight * 2,
+    behavior: 'smooth',
+  });
+}
+
+function onCurrentHits(response) {
+  currentHits = response.length;
+  if (currentHits >= 40) {
+    loadMoreBtn.show();
+  } else {
+    loadMoreBtn.hide();
+    Notify.failure(
+      "We're sorry, but you've reached the end of search results."
+    );
+  }
+  renderCard(response);
+  lightbox.refresh();
 }
 
 //Отчистить вывод
-function clearCards(element) {
-  // countryInfo.innerHTML = '';
+function clearCards() {
+  cardsContainer.innerHTML = '';
 }
 
 function onFitchError() {
+  loadMoreBtn.hide();
   Notify.failure(
     'Sorry, there are no images matching your search query. Please try again.',
     {
