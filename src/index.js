@@ -1,10 +1,9 @@
 import './css/common.css';
 import LoadMoreBtn from './components/LoadMoreBtn.js';
+import AxiosRequest from './js/axiosRequest';
 import { Notify } from 'notiflix/build/notiflix-notify-aio'; //для сообщений
 import SimpleLightbox from 'simplelightbox';
 import 'simplelightbox/dist/simple-lightbox.min.css';
-// import debounce from 'lodash.debounce';
-import AxiosRequest from './js/axiosRequest';
 
 const form = document.getElementById('search-form');
 const cardsContainer = document.querySelector('.gallery');
@@ -101,7 +100,7 @@ async function onLoadMore() {
 }
 
 function onCurrentHits(response) {
-  currentHits = response.length;
+  let currentHits = response.length;
   if (currentHits >= 40) {
     loadMoreBtn.show();
   } else {
