@@ -35,6 +35,7 @@ async function onSearch(e) {
     alert('No data');
   } else {
     loadMoreBtn.show();
+    loadMoreBtn.disable();
     const response = await axiosRequest.fetchElement();
     Notify.success(`Hooray! We found ${axiosRequest.totalHits} images.`);
     onCurrentHits(response);
